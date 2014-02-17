@@ -7,10 +7,13 @@ not support the aggregation framework. This script can be used
 as a filter for converting non-nested results to csv.
 """
 
-__usage__ = "mongo db/col aggregation.js | mongoaggregationcsv.py > output.csv"
+__usage__ = "mongo --quiet db/col query.js | mongoaggregationcsv.py"
 __author__ = "Chris Seymour"
 __twitter__ = "iiSeymour"
 __license__ = "MIT"
+
+
+from StringIO import StringIO
 
 
 def checkSchema(document):
@@ -53,13 +56,47 @@ def checkDepth(document):
     return True
 
 
+def csvHeader(document, sep=","):
+    """
+    Return CSV column names
+    """
+    return ','.join(map(str, data["result"][0].keys())) + '\n'
+
+
+def csvRow(document, sep=","):
+    """
+    Return CSV rows
+    """
+    return ','.join(map(str, document.values())) + '\n'
+
+
+def toCSV(document, sep=","):
+    """
+    Convert mongodb aggregation document to CSV file
+    """
+    csv = StringIO()
+
+    csv.write(csvHeader(document, sep=sep))
+    for subdoc in data["result"]:
+        csv.write(csvRow(subdoc, sep=sep))
+
+    return csv
+
 if __name__ == "__main__":
 
+    import re
     import sys
     import json
 
+    mongo_json = StringIO()
+
+    for line in sys.stdin:
+        line = re.sub(r"NumberLong[(](\d+)[)]", r"\1", line)
+        line = re.sub(r"ObjectId[(]([^)]+)[)]", r"\1", line)
+        mongo_json.write(line)
+
     try:
-        data = json.load(sys.stdin)
+        data = json.loads(mongo_json.getvalue())
     except ValueError:
         sys.stderr.write("Input could not be encoded as JSON\n")
         sys.exit(1)
@@ -80,7 +117,4 @@ if __name__ == "__main__":
         sys.stderr.write("Aggregation results are nested\n")
         sys.exit(1)
 
-    print ','.join(data["result"][0].keys())
-
-    for subdoc in data["result"]:
-        print ','.join(map(str, subdoc.values()))
+    print toCSV(data).getvalue()
