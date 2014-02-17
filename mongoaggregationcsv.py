@@ -18,7 +18,7 @@ from StringIO import StringIO
 
 def checkSchema(document):
     """
-    Validate document is from a Mongo Aggregation
+    Validate document is from a MongoDB aggregation query
     """
     if isinstance(document, dict):
         return bool("result" in document and "ok" in document)
@@ -26,21 +26,22 @@ def checkSchema(document):
 
 def checkOk(document):
     """
-    Check aggregation ok flag
+    Validate the querys ok flag
     """
     return document["ok"] == 1
 
 
 def checkEmpty(document):
     """
-    Check results array contains at least one document
+    Validate the result array contains at least one document
     """
     return len(document["result"]) > 0
 
 
 def checkDepth(document):
     """
-    Check each sub-document in the results array has no nested documents
+    Validate each sub-document in the results array has no nested documents
+    Only scalar values and flat lists permitted
     """
     for subdoc in document["result"]:
         if any(isinstance(item, dict) for item in subdoc.values()):
@@ -56,38 +57,44 @@ def checkDepth(document):
     return True
 
 
-def uniqueKeys(document):
+def uniqueKeys(document, sep=","):
     """
-    Get all unique keys in the document for the column headers
+    Get all unique keys in the document for the CSV headers
     """
     columns = []
 
     for subdoc in document["result"]:
         for key in subdoc.keys():
             if key not in columns:
+                if isinstance(key, str) and sep in key:
+                    key = '"%s"' % key
                 columns.append(key)
     return sorted(columns)
 
 
 def csvHeader(document, columns, sep=","):
     """
-    Return CSV column names
+    Returns the CSV header
     """
-    columns = uniqueKeys(document)
-    return ','.join(map(str, columns)) + '\n'
+    return sep.join(map(str, columns)) + '\n'
 
 
 def csvRow(document, columns, sep=","):
     """
-    Return CSV rows
+    Returns a CSV rows
     """
     row = []
     for key in columns:
-        val = document.get(key, '')
+        if sep in key:
+            val = document.get(key[1:-1], '')
+        else:
+            val = document.get(key, '')
+        if isinstance(val, str) and sep in val:
+            val = '"%s"' % val
         if isinstance(val, list):
             val = '"%s"' % sep.join(map(str, val))
-        row.append(val)
 
+        row.append(val)
     return sep.join(map(str, row)) + '\n'
 
 

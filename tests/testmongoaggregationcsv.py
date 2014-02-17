@@ -63,6 +63,18 @@ class TestMongoAggregationCSV(unittest.TestCase):
         res = toCSV.toCSV(testdata).getvalue()
         self.assertEquals(res, expected)
 
+    def test_embedded_sep_header(self):
+        testdata = {"result": [{'a': 1}, {'b': 2}, {'c,d,e': 3}], "ok": 1}
+        expected = '"c,d,e",a,b\n,1,\n,,2\n3,,\n'
+        res = toCSV.toCSV(testdata).getvalue()
+        self.assertEquals(res, expected)
+
+    def test_embedded_sep_rowe(self):
+        testdata = {"result": [{'a': 1}, {'b': 2}, {'c': "3,4,5"}], "ok": 1}
+        expected = 'a,b,c\n1,,\n,2,\n,,"3,4,5"\n'
+        res = toCSV.toCSV(testdata).getvalue()
+        self.assertEquals(res, expected)
+
 
 if __name__ == "__main__":
     unittest.main()
