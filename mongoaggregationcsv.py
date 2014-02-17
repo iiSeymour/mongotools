@@ -83,9 +83,12 @@ def csvRow(document, columns, sep=","):
     """
     row = []
     for key in columns:
-        row.append(document.get(key, ''))
+        val = document.get(key, '')
+        if isinstance(val, list):
+            val = '"%s"' % sep.join(map(str, val))
+        row.append(val)
 
-    return ','.join(map(str, row)) + '\n'
+    return sep.join(map(str, row)) + '\n'
 
 
 def toCSV(document, sep=","):
@@ -96,7 +99,7 @@ def toCSV(document, sep=","):
     columns = uniqueKeys(document)
 
     csv.write(csvHeader(document, columns, sep=sep))
-    for subdoc in data["result"]:
+    for subdoc in document["result"]:
         csv.write(csvRow(subdoc, columns, sep=sep))
 
     return csv

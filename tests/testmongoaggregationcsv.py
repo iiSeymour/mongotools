@@ -19,6 +19,12 @@ class TestMongoAggregationCSV(unittest.TestCase):
         testdata = {"result": [{'a': 1}, {'b': 2}, {'c': 3}], "ok": 0}
         self.assertTrue(toCSV.checkSchema(testdata))
 
+    def test_invalid_schema_4(self):
+        testdata = {"result": [{'a': 1}, {'b': 2}, {'c': 3}], "ok": 0}
+        expected = "a,b,c\n1,,\n,2,\n,,3\n"
+        res = toCSV.toCSV(testdata).getvalue()
+        self.assertEquals(res, expected)
+
     def test_ok_flag_1(self):
         testdata = {"result": [{'a': 1}, {'b': 2}, {'c': 3}], "ok": 0}
         self.assertFalse(toCSV.checkOk(testdata))
@@ -50,6 +56,13 @@ class TestMongoAggregationCSV(unittest.TestCase):
     def test_depth_4(self):
         testdata = {"result": [{'a': 1}, {'b': 2}, {'c': {'d': 3}}], "ok": 1}
         self.assertFalse(toCSV.checkDepth(testdata))
+
+    def test_depth_5(self):
+        testdata = {"result": [{'a': 1}, {'b': 2}, {'c': [3, 4, 5]}], "ok": 1}
+        expected = 'a,b,c\n1,,\n,2,\n,,"3,4,5"\n'
+        res = toCSV.toCSV(testdata).getvalue()
+        self.assertEquals(res, expected)
+
 
 if __name__ == "__main__":
     unittest.main()
