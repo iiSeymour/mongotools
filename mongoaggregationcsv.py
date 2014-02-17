@@ -56,18 +56,36 @@ def checkDepth(document):
     return True
 
 
-def csvHeader(document, sep=","):
+def uniqueKeys(document):
+    """
+    Get all unique keys in the document for the column headers
+    """
+    columns = []
+
+    for subdoc in document["result"]:
+        for key in subdoc.keys():
+            if key not in columns:
+                columns.append(key)
+    return sorted(columns)
+
+
+def csvHeader(document, columns, sep=","):
     """
     Return CSV column names
     """
-    return ','.join(map(str, data["result"][0].keys())) + '\n'
+    columns = uniqueKeys(document)
+    return ','.join(map(str, columns)) + '\n'
 
 
-def csvRow(document, sep=","):
+def csvRow(document, columns, sep=","):
     """
     Return CSV rows
     """
-    return ','.join(map(str, document.values())) + '\n'
+    row = []
+    for key in columns:
+        row.append(document.get(key, ''))
+
+    return ','.join(map(str, row)) + '\n'
 
 
 def toCSV(document, sep=","):
@@ -75,10 +93,11 @@ def toCSV(document, sep=","):
     Convert mongodb aggregation document to CSV file
     """
     csv = StringIO()
+    columns = uniqueKeys(document)
 
-    csv.write(csvHeader(document, sep=sep))
+    csv.write(csvHeader(document, columns, sep=sep))
     for subdoc in data["result"]:
-        csv.write(csvRow(subdoc, sep=sep))
+        csv.write(csvRow(subdoc, columns, sep=sep))
 
     return csv
 
@@ -91,9 +110,15 @@ if __name__ == "__main__":
     mongo_json = StringIO()
 
     for line in sys.stdin:
+        if line.startswith("MongoDB shell") or line.startswith("connecting"):
+            continue
         line = re.sub(r"NumberLong[(](\d+)[)]", r"\1", line)
         line = re.sub(r"ObjectId[(]([^)]+)[)]", r"\1", line)
         mongo_json.write(line)
+
+    if mongo_json.getvalue().startswith("Error:"):
+        print mongo_json.getvalue()
+        sys.exit(1)
 
     try:
         data = json.loads(mongo_json.getvalue())
